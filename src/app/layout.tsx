@@ -4,8 +4,8 @@ import { Toaster } from '@/components/ui/toaster';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Gemini Game Forge',
-  description: 'AI-powered game development environment',
+  title: 'GameGen',
+  description: 'GameGen AI Agent - Your H5 Game Development Assistant',
 };
 
 export default function RootLayout({

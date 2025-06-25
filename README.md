@@ -1,4 +1,4 @@
-# Firebase Studio
+# GameGen
 
 This is a NextJS starter in Firebase Studio.
 

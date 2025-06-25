@@ -1,6 +1,6 @@
 'use client';
 
-import { Download, PanelLeft, PanelLeftClose, PanelRight, PanelRightClose } from 'lucide-react';
+import { ArrowLeft, Download, PanelLeft, PanelLeftClose, PanelRight, PanelRightClose } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -11,6 +11,7 @@ type AppHeaderProps = {
   toggleLeftPanel: () => void;
   rightPanelCollapsed: boolean;
   toggleRightPanel: () => void;
+  onBack: () => void;
 };
 
 export function AppHeader({
@@ -18,16 +19,20 @@ export function AppHeader({
   toggleLeftPanel,
   rightPanelCollapsed,
   toggleRightPanel,
+  onBack
 }: AppHeaderProps) {
   return (
     <header className="flex h-14 items-center gap-4 border-b bg-card/80 px-4 backdrop-blur-sm">
+      <Button variant="ghost" size="icon" onClick={onBack} aria-label="Back to projects">
+        <ArrowLeft />
+      </Button>
       <Button variant="ghost" size="icon" onClick={toggleLeftPanel} aria-label="Toggle file explorer">
         {leftPanelCollapsed ? <PanelLeft /> : <PanelLeftClose />}
       </Button>
       <div className="flex items-center gap-2">
         <Logo />
         <h1 className="font-headline text-xl font-bold tracking-tight text-foreground">
-          Gemini Game Forge
+          GameGen
         </h1>
       </div>
 
