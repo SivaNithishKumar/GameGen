@@ -5,7 +5,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'GameGen',
-  description: 'GameGen AI Agent - Your H5 Game Development Assistant',
+  description: 'Your agentic game development platform.',
 };
 
 export default function RootLayout({

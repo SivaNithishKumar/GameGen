@@ -10,6 +10,7 @@ import { ChatPanel } from '@/components/chat-panel';
 import { EditorPanel } from '@/components/editor-panel';
 import { FileExplorer } from '@/components/file-explorer';
 import { cn } from '@/lib/utils';
+import { TemplateSelection } from '@/components/template-selection';
 
 
 const mockProjects = [
@@ -38,11 +39,16 @@ const mockProjects = [
 
 export default function Home() {
   
-  const [currentView, setCurrentView] = React.useState('dashboard');
+  const [currentView, setCurrentView] = React.useState('dashboard'); // 'dashboard', 'template-selection', 'editor'
 
   const handleCreateNew = () => {
-    // This will eventually lead to the template selection screen
-    console.log("Navigate to template selection");
+    setCurrentView('template-selection');
+  };
+
+  const handleTemplateSelect = (templateId: string) => {
+    console.log(`Selected template: ${templateId}`);
+    // This will eventually lead to the AI reskin screen
+    setCurrentView('editor');
   };
 
   const handleContinueProject = (projectId: string) => {
@@ -54,6 +60,10 @@ export default function Home() {
     return <EditorView onBack={() => setCurrentView('dashboard')} />;
   }
 
+  if (currentView === 'template-selection') {
+    return <TemplateSelection onBack={() => setCurrentView('dashboard')} onSelect={handleTemplateSelect} />;
+  }
+
   return (
     <div className="flex min-h-screen w-full flex-col bg-background text-foreground">
       <header className="flex h-16 items-center justify-between border-b px-6">
@@ -61,7 +71,7 @@ export default function Home() {
           <span className="text-2xl" role="img" aria-label="controller">
             🎮
           </span>
-          <h1 className="font-headline text-2xl font-bold">GameGen AI Agent</h1>
+          <h1 className="font-headline text-2xl font-bold">GameGen</h1>
         </div>
         <Button variant="ghost" size="icon">
           <User className="h-6 w-6" />
