@@ -2,66 +2,83 @@
 
 import * as React from 'react';
 import Image from 'next/image';
-import { Card, CardContent, CardFooter, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { GamegenFullLogo } from './gamegen-full-logo';
 
 const gameTemplates = [
   {
     id: 'flappy-bird',
     name: 'Flappy Bird',
-    difficulty: 'Simple',
+    difficulty: 'Easy',
     preview: 'https://placehold.co/600x400.png',
-    previewHint: 'flying bird obstacle',
+    previewHint: 'pixel art bird city',
   },
   {
     id: 'speed-runner',
     name: 'Speed Runner',
     difficulty: 'Medium',
     preview: 'https://placehold.co/600x400.png',
-    previewHint: 'running character platformer',
+    previewHint: 'pixel art hero coin',
   },
   {
     id: 'whack-a-mole',
-    name: 'Whack-a-Mole',
-    difficulty: 'Simple',
+    name: 'Whack-the-Mole',
+    difficulty: 'Medium',
     preview: 'https://placehold.co/600x400.png',
-    previewHint: 'mole hole hammer',
+    previewHint: 'pixel art mole hole',
   },
   {
     id: 'match-3',
-    name: 'Match-3',
+    name: 'Simple Match-3',
     difficulty: 'Medium',
     preview: 'https://placehold.co/600x400.png',
-    previewHint: 'gems jewels matching',
+    previewHint: 'colorful gems jewels',
+  },
+  {
+    id: 'match-3-hard',
+    name: 'Simple Match-3',
+    difficulty: 'Hard',
+    preview: 'https://placehold.co/600x400.png',
+    previewHint: 'gems jewels matching puzzle',
   },
   {
     id: 'crossy-road',
     name: 'Crossy Road',
-    difficulty: 'Medium',
+    difficulty: 'Hard',
     preview: 'https://placehold.co/600x400.png',
-    previewHint: 'character crossing road',
+    previewHint: 'voxel chicken road',
   },
 ];
 
 type TemplateSelectionProps = {
-  onBack: () => void;
   onSelect: (templateId: string) => void;
 };
 
-export function TemplateSelection({ onBack, onSelect }: TemplateSelectionProps) {
+export function TemplateSelection({ onSelect }: TemplateSelectionProps) {
   return (
     <div className="flex min-h-screen w-full flex-col bg-background text-foreground">
-      <header className="flex h-16 items-center border-b px-6">
-        <h1 className="font-headline text-2xl font-bold">🎮 Choose Your Game Template</h1>
+      <header className="flex h-16 items-center border-b border-border/50 px-6 sm:px-10">
+        <GamegenFullLogo />
+        <nav className="mx-auto">
+          <ul className="flex items-center gap-8 text-muted-foreground">
+            <li className="text-primary font-semibold relative">
+              1. Pick Template
+              <div className="absolute -bottom-[22px] left-0 w-full h-0.5 bg-primary" />
+            </li>
+            <li>2. Reskin</li>
+            <li>3. Set Parameters</li>
+            <li>4. Export</li>
+          </ul>
+        </nav>
       </header>
-      <main className="flex-1 overflow-y-auto p-8">
-        <div className="mx-auto max-w-6xl">
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+      <main className="flex-1 overflow-y-auto p-8 sm:p-12">
+        <div className="mx-auto max-w-7xl">
+          <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
             {gameTemplates.map((template) => (
-              <Card key={template.id} className="flex flex-col overflow-hidden transition-all hover:shadow-lg hover:-translate-y-1">
-                <div className="aspect-[4/3] w-full">
+              <Card key={template.id} className="flex flex-col overflow-hidden rounded-xl bg-card/80 border-border/50 transition-all hover:shadow-lg hover:-translate-y-1 hover:border-primary/50">
+                <div className="aspect-video w-full overflow-hidden">
                   <Image
                     src={template.preview}
                     alt={`${template.name} preview`}
@@ -71,21 +88,17 @@ export function TemplateSelection({ onBack, onSelect }: TemplateSelectionProps) 
                     data-ai-hint={template.previewHint}
                   />
                 </div>
-                <CardContent className="flex-1 p-4">
-                  <CardTitle className="text-lg">{template.name}</CardTitle>
-                  <Badge variant="outline" className="mt-2">{template.difficulty}</Badge>
+                <CardContent className="flex-1 p-6 flex flex-col">
+                  <div className="flex-1">
+                    <CardTitle className="text-xl mb-2">{template.name}</CardTitle>
+                    <Badge variant="secondary" className="font-normal">{template.difficulty}</Badge>
+                  </div>
+                  <Button className="w-full mt-6 text-base font-semibold" variant="secondary" size="lg" onClick={() => onSelect(template.id)}>
+                    Start Customizing
+                  </Button>
                 </CardContent>
-                <CardFooter className="p-4 pt-0">
-                  <Button className="w-full" onClick={() => onSelect(template.id)}>Select</Button>
-                </CardFooter>
               </Card>
             ))}
-          </div>
-          <div className="mt-12 flex justify-center">
-            <Button variant="ghost" onClick={onBack}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Projects
-            </Button>
           </div>
         </div>
       </main>

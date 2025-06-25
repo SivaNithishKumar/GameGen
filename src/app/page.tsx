@@ -11,6 +11,9 @@ import { EditorPanel } from '@/components/editor-panel';
 import { FileExplorer } from '@/components/file-explorer';
 import { cn } from '@/lib/utils';
 import { TemplateSelection } from '@/components/template-selection';
+import { ReskinWorkshop } from '@/components/reskin-workshop';
+import { ParameterEditor } from '@/components/parameter-editor';
+import { Logo } from '@/components/logo';
 
 
 const mockProjects = [
@@ -39,7 +42,8 @@ const mockProjects = [
 
 export default function Home() {
   
-  const [currentView, setCurrentView] = React.useState('dashboard'); // 'dashboard', 'template-selection', 'editor'
+  const [currentView, setCurrentView] = React.useState('dashboard'); // 'dashboard', 'template-selection', 'reskin', 'parameters', 'editor'
+  const [selectedTemplate, setSelectedTemplate] = React.useState<string | null>(null);
 
   const handleCreateNew = () => {
     setCurrentView('template-selection');
@@ -47,30 +51,48 @@ export default function Home() {
 
   const handleTemplateSelect = (templateId: string) => {
     console.log(`Selected template: ${templateId}`);
-    // This will eventually lead to the AI reskin screen
+    setSelectedTemplate(templateId);
+    setCurrentView('reskin');
+  };
+
+  const handleReskinComplete = () => {
+    setCurrentView('parameters');
+  };
+
+  const handleParametersComplete = () => {
     setCurrentView('editor');
   };
 
   const handleContinueProject = (projectId: string) => {
-    // This will load the project and go to the chat/editor view
     setCurrentView('editor');
   };
 
+  const handleBackToDashboard = () => {
+    setCurrentView('dashboard');
+  };
+
   if (currentView === 'editor') {
-    return <EditorView onBack={() => setCurrentView('dashboard')} />;
+    return <EditorView onBack={handleBackToDashboard} />;
+  }
+
+  if (currentView === 'reskin') {
+    return <ReskinWorkshop onBack={() => setCurrentView('template-selection')} onNext={handleReskinComplete} />;
+  }
+  
+  if (currentView === 'parameters') {
+    return <ParameterEditor onBack={() => setCurrentView('reskin')} onNext={handleParametersComplete} />;
   }
 
   if (currentView === 'template-selection') {
-    return <TemplateSelection onBack={() => setCurrentView('dashboard')} onSelect={handleTemplateSelect} />;
+    return <TemplateSelection onSelect={handleTemplateSelect} />;
   }
+
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-background text-foreground">
       <header className="flex h-16 items-center justify-between border-b px-6">
         <div className="flex items-center gap-3">
-          <span className="text-2xl" role="img" aria-label="controller">
-            🎮
-          </span>
+          <Logo />
           <h1 className="font-headline text-2xl font-bold">GameGen</h1>
         </div>
         <Button variant="ghost" size="icon">
