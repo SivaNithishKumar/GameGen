@@ -5,27 +5,27 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, ArrowRight, CheckCircle, Gamepad2, LoaderCircle, Music, Palette, Bot } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle, Gamepad2, LoaderCircle, Bot, Palette } from 'lucide-react';
 import { GamegenFullLogo } from './gamegen-full-logo';
 import { generateGameAssets } from '@/ai/flows/generate-game-assets';
-import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-
-type ReskinWorkshopProps = {
-  onBack: () => void;
-  onNext: () => void;
-};
 
 type Asset = 'player' | 'background' | 'obstacles' | 'music';
 const assetTypes: Asset[] = ['player', 'background', 'obstacles', 'music'];
 
-type GeneratedAssets = {
+export type GeneratedAssets = {
   [key in Asset]: string | null;
 };
 
 type GenerationStatus = {
-  [key in Asset]: boolean;
+  [key in Asset]: 'pending' | 'generating' | 'done' | 'error';
 };
+
+type ReskinWorkshopProps = {
+  onBack: () => void;
+  onNext: (assets: GeneratedAssets) => void;
+};
+
 
 export function ReskinWorkshop({ onBack, onNext }: ReskinWorkshopProps) {
   const [theme, setTheme] = React.useState('');
@@ -35,43 +35,40 @@ export function ReskinWorkshop({ onBack, onNext }: ReskinWorkshopProps) {
     obstacles: null,
     music: null,
   });
-  const [isGenerating, setIsGenerating] = React.useState<GenerationStatus>({
-    player: false,
-    background: false,
-    obstacles: false,
-    music: false,
+  const [generationStatus, setGenerationStatus] = React.useState<GenerationStatus>({
+    player: 'pending',
+    background: 'pending',
+    obstacles: 'pending',
+    music: 'pending',
   });
-  const [isAnythingGenerating, setIsAnythingGenerating] = React.useState(false);
+  
+  const isAnythingGenerating = Object.values(generationStatus).some(s => s === 'generating');
   const { toast } = useToast();
 
-  const handleGenerate = async () => {
+  const handleGenerateAsset = async (asset: Asset) => {
     if (!theme.trim()) {
-      toast({ title: 'Error', description: 'Please enter a theme description.', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Please enter a theme description first.', variant: 'destructive' });
       return;
     }
+    setGenerationStatus(prev => ({...prev, [asset]: 'generating'}));
+    try {
+      const result = await generateGameAssets({
+        assetType: asset === 'music' ? 'music' : 'image',
+        theme: theme,
+        prompt: `A single, distinct game asset for a '${asset}' in a '${theme}' themed game. For images, ensure a transparent or clean background.`,
+      });
+      setGeneratedAssets((prev) => ({ ...prev, [asset]: result.assetData }));
+      setGenerationStatus(prev => ({...prev, [asset]: 'done'}));
+    } catch (error) {
+      console.error(`Error generating ${asset}:`, error);
+      toast({ title: 'Generation Error', description: `Failed to generate the ${asset}. Please try again.`, variant: 'destructive' });
+      setGenerationStatus(prev => ({...prev, [asset]: 'error'}));
+    }
+  }
 
-    setIsGenerating({ player: true, background: true, obstacles: true, music: true });
-    setIsAnythingGenerating(true);
-
-    const assetPromises = assetTypes.map(async (asset) => {
-      try {
-        const result = await generateGameAssets({
-          assetType: asset === 'music' ? 'music' : 'image',
-          theme: theme,
-          prompt: `A ${asset} for a ${theme} themed game.`,
-        });
-        setGeneratedAssets((prev) => ({ ...prev, [asset]: result.assetData }));
-      } catch (error) {
-        console.error(`Error generating ${asset}:`, error);
-        toast({ title: 'Generation Error', description: `Failed to generate the ${asset}. Please try again.`, variant: 'destructive' });
-      } finally {
-        setIsGenerating((prev) => ({ ...prev, [asset]: false }));
-      }
-    });
-
-    await Promise.all(assetPromises);
-    setIsAnythingGenerating(false);
-  };
+  const handleGenerateAll = () => {
+    assetTypes.forEach(asset => handleGenerateAsset(asset));
+  }
   
   const allAssetsGenerated = Object.values(generatedAssets).every(asset => asset !== null);
 
@@ -79,12 +76,12 @@ export function ReskinWorkshop({ onBack, onNext }: ReskinWorkshopProps) {
     <div className="flex min-h-screen w-full flex-col bg-background text-foreground">
       <header className="flex h-16 items-center border-b border-border/50 px-6 sm:px-10">
         <GamegenFullLogo />
-        <nav className="mx-auto">
+        <nav className="mx-auto hidden md:flex">
           <ul className="flex items-center gap-8 text-muted-foreground">
             <li>1. Pick Template</li>
-            <li className="text-primary font-semibold relative">
+            <li className="font-semibold text-primary relative">
               2. Reskin
-              <div className="absolute -bottom-[22px] left-0 w-full h-0.5 bg-primary" />
+              <div className="absolute -bottom-[22px] left-0 h-0.5 w-full bg-primary" />
             </li>
             <li>3. Set Parameters</li>
             <li>4. Export</li>
@@ -96,7 +93,7 @@ export function ReskinWorkshop({ onBack, onNext }: ReskinWorkshopProps) {
             <h2 className="text-3xl font-bold flex items-center justify-center gap-3">
               <Palette /> AI Reskin Workshop
             </h2>
-            <p className="mt-2 text-muted-foreground">Describe your game theme (e.g., cyberpunk, medieval fantasy, cute forest animals)</p>
+            <p className="mt-2 text-muted-foreground">Describe your game's theme (e.g., cyberpunk, medieval fantasy, cute forest animals)</p>
         </div>
         
         <div className="my-8 flex w-full max-w-lg items-center space-x-2">
@@ -107,9 +104,9 @@ export function ReskinWorkshop({ onBack, onNext }: ReskinWorkshopProps) {
                 onChange={(e) => setTheme(e.target.value)}
                 disabled={isAnythingGenerating}
             />
-            <Button onClick={handleGenerate} disabled={isAnythingGenerating}>
+            <Button onClick={handleGenerateAll} disabled={isAnythingGenerating || !theme.trim()}>
                 {isAnythingGenerating ? <LoaderCircle className="animate-spin" /> : <Bot />}
-                <span className="ml-2 hidden sm:inline">Generate</span>
+                <span className="ml-2 hidden sm:inline">Generate All</span>
             </Button>
         </div>
 
@@ -121,17 +118,17 @@ export function ReskinWorkshop({ onBack, onNext }: ReskinWorkshopProps) {
                         {assetTypes.map((asset) => (
                              <div key={asset} className="flex items-center justify-between rounded-lg bg-muted/50 p-3">
                                 <span className="capitalize font-medium">{asset}</span>
-                                {isGenerating[asset] ? (
+                                {generationStatus[asset] === 'generating' ? (
                                     <LoaderCircle className="animate-spin text-primary" />
-                                ) : generatedAssets[asset] ? (
+                                ) : generationStatus[asset] === 'done' ? (
                                     <CheckCircle className="text-green-500" />
                                 ) : (
-                                    <div className="w-6 h-6" />
+                                    <Button size="sm" variant="ghost" onClick={() => handleGenerateAsset(asset)} disabled={isAnythingGenerating}>Regenerate</Button>
                                 )}
                             </div>
                         ))}
                     </div>
-                    <div className="mt-4">
+                    <div className="mt-4 border-t pt-4">
                         <h4 className="font-semibold mb-2">Generated Music:</h4>
                         {generatedAssets.music ? (
                              <audio controls src={generatedAssets.music} className="w-full">
@@ -172,7 +169,7 @@ export function ReskinWorkshop({ onBack, onNext }: ReskinWorkshopProps) {
             <ArrowLeft className="mr-2" />
             Back to Templates
           </Button>
-          <Button onClick={onNext} disabled={!allAssetsGenerated}>
+          <Button onClick={() => onNext(generatedAssets)} disabled={!allAssetsGenerated}>
             Continue to Parameters
             <ArrowRight className="ml-2" />
           </Button>

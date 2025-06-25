@@ -6,30 +6,30 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Card, CardContent, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, ArrowRight, Bot, Gamepad2, LoaderCircle, Settings, SlidersHorizontal } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Bot, Gamepad2, LoaderCircle, SlidersHorizontal } from 'lucide-react';
 import { GamegenFullLogo } from './gamegen-full-logo';
 import { useToast } from '@/hooks/use-toast';
 import { adjustGameParameters } from '@/ai/flows/adjust-game-parameters';
 
 
-type ParameterEditorProps = {
-  onBack: () => void;
-  onNext: () => void;
-};
-
-type GameParameters = {
+export type GameParameters = {
   speed: number;
   gravity: number;
   gapSize: number;
   spawnRate: number;
 };
 
+type ParameterEditorProps = {
+  onBack: () => void;
+  onNext: (params: GameParameters) => void;
+};
+
 export function ParameterEditor({ onBack, onNext }: ParameterEditorProps) {
   const [parameters, setParameters] = React.useState<GameParameters>({
     speed: 5,
-    gravity: 5,
+    gravity: 3,
     gapSize: 5,
-    spawnRate: 5,
+    spawnRate: 4,
   });
   const [aiPrompt, setAiPrompt] = React.useState('');
   const [isGenerating, setIsGenerating] = React.useState(false);
@@ -79,13 +79,13 @@ export function ParameterEditor({ onBack, onNext }: ParameterEditorProps) {
     <div className="flex min-h-screen w-full flex-col bg-background text-foreground">
       <header className="flex h-16 items-center border-b border-border/50 px-6 sm:px-10">
         <GamegenFullLogo />
-        <nav className="mx-auto">
+        <nav className="mx-auto hidden md:flex">
           <ul className="flex items-center gap-8 text-muted-foreground">
             <li>1. Pick Template</li>
             <li>2. Reskin</li>
-            <li className="text-primary font-semibold relative">
+            <li className="font-semibold text-primary relative">
               3. Set Parameters
-              <div className="absolute -bottom-[22px] left-0 w-full h-0.5 bg-primary" />
+              <div className="absolute -bottom-[22px] left-0 h-0.5 w-full bg-primary" />
             </li>
             <li>4. Export</li>
           </ul>
@@ -103,19 +103,19 @@ export function ParameterEditor({ onBack, onNext }: ParameterEditorProps) {
                     <CardTitle className="mb-6">Parameters</CardTitle>
                     <div className="space-y-6">
                         <div>
-                            <Label htmlFor="speed">Speed: {parameters.speed}</Label>
+                            <Label htmlFor="speed">Speed (1-10): {parameters.speed}</Label>
                             <Slider id="speed" min={1} max={10} step={1} value={[parameters.speed]} onValueChange={(val) => handleParameterChange('speed', val)} />
                         </div>
                          <div>
-                            <Label htmlFor="gravity">Gravity: {parameters.gravity}</Label>
+                            <Label htmlFor="gravity">Gravity (1-10): {parameters.gravity}</Label>
                             <Slider id="gravity" min={1} max={10} step={1} value={[parameters.gravity]} onValueChange={(val) => handleParameterChange('gravity', val)} />
                         </div>
                         <div>
-                            <Label htmlFor="gapSize">Gap Size: {parameters.gapSize}</Label>
+                            <Label htmlFor="gapSize">Gap Size (1-10): {parameters.gapSize}</Label>
                             <Slider id="gapSize" min={1} max={10} step={1} value={[parameters.gapSize]} onValueChange={(val) => handleParameterChange('gapSize', val)} />
                         </div>
                         <div>
-                            <Label htmlFor="spawnRate">Spawn Rate: {parameters.spawnRate}</Label>
+                            <Label htmlFor="spawnRate">Spawn Rate (1-10): {parameters.spawnRate}</Label>
                             <Slider id="spawnRate" min={1} max={10} step={1} value={[parameters.spawnRate]} onValueChange={(val) => handleParameterChange('spawnRate', val)} />
                         </div>
                     </div>
@@ -161,7 +161,7 @@ export function ParameterEditor({ onBack, onNext }: ParameterEditorProps) {
             <ArrowLeft className="mr-2" />
             Back to Reskin
           </Button>
-          <Button onClick={onNext}>
+          <Button onClick={() => onNext(parameters)}>
             Enter Chat Mode
             <ArrowRight className="ml-2" />
           </Button>

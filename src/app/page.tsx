@@ -8,12 +8,14 @@ import * as React from 'react';
 import { AppHeader } from '@/components/app-header';
 import { ChatPanel } from '@/components/chat-panel';
 import { EditorPanel } from '@/components/editor-panel';
-import { FileExplorer } from '@/components/file-explorer';
+import { FileExplorer, FileNode } from '@/components/file-explorer';
 import { cn } from '@/lib/utils';
 import { TemplateSelection } from '@/components/template-selection';
-import { ReskinWorkshop } from '@/components/reskin-workshop';
-import { ParameterEditor } from '@/components/parameter-editor';
+import { ReskinWorkshop, GeneratedAssets } from '@/components/reskin-workshop';
+import { ParameterEditor, GameParameters } from '@/components/parameter-editor';
 import { Logo } from '@/components/logo';
+import { templates } from '@/game-templates';
+import { useToast } from '@/hooks/use-toast';
 
 
 const mockProjects = [
@@ -40,39 +42,112 @@ const mockProjects = [
   },
 ];
 
+type FileData = {
+  name: string;
+  content: string;
+  previewContent?: string;
+};
+
+
 export default function Home() {
-  
   const [currentView, setCurrentView] = React.useState('dashboard'); // 'dashboard', 'template-selection', 'reskin', 'parameters', 'editor'
   const [selectedTemplate, setSelectedTemplate] = React.useState<string | null>(null);
+  const [generatedAssets, setGeneratedAssets] = React.useState<GeneratedAssets | null>(null);
+  const [gameParameters, setGameParameters] = React.useState<GameParameters | null>(null);
+  const [fileTree, setFileTree] = React.useState<FileNode | null>(null);
+  const { toast } = useToast();
 
   const handleCreateNew = () => {
     setCurrentView('template-selection');
   };
 
   const handleTemplateSelect = (templateId: string) => {
-    console.log(`Selected template: ${templateId}`);
     setSelectedTemplate(templateId);
     setCurrentView('reskin');
   };
 
-  const handleReskinComplete = () => {
+  const handleReskinComplete = (assets: GeneratedAssets) => {
+    setGeneratedAssets(assets);
     setCurrentView('parameters');
   };
 
-  const handleParametersComplete = () => {
+  const handleParametersComplete = (params: GameParameters) => {
+    if (!selectedTemplate || !generatedAssets) {
+      toast({
+        title: "Error",
+        description: "Something went wrong. Please start over.",
+        variant: "destructive"
+      });
+      setCurrentView('dashboard');
+      return;
+    }
+    setGameParameters(params);
+
+    const templateFiles = templates[selectedTemplate as keyof typeof templates];
+    if (!templateFiles) {
+        toast({
+            title: "Error",
+            description: `Template '${selectedTemplate}' not found.`,
+            variant: "destructive"
+        });
+        setCurrentView('template-selection');
+        return;
+    }
+
+    let jsCode = templateFiles['js/main.js'];
+
+    // Inject parameters
+    jsCode = jsCode.replace(/{{SPEED}}/g, params.speed.toString());
+    jsCode = jsCode.replace(/{{GRAVITY}}/g, params.gravity.toString());
+    jsCode = jsCode.replace(/{{GAP_SIZE}}/g, params.gapSize.toString());
+    jsCode = jsCode.replace(/{{SPAWN_RATE}}/g, params.spawnRate.toString());
+
+    // Inject assets
+    jsCode = jsCode.replace(/{{PLAYER_ASSET}}/g, generatedAssets.player || '');
+    jsCode = jsCode.replace(/{{OBSTACLE_ASSET}}/g, generatedAssets.obstacles || '');
+    jsCode = jsCode.replace(/{{BACKGROUND_ASSET}}/g, generatedAssets.background || '');
+    jsCode = jsCode.replace(/{{MUSIC_ASSET}}/g, generatedAssets.music || '');
+
+
+    const htmlCode = templateFiles['index.html'];
+    const previewHtml = htmlCode.replace(
+      '<script src="js/main.js"></script>',
+      `<script>${jsCode}</script>`
+    );
+    
+    const finalFileTree: FileNode = {
+      name: 'GameGen Project',
+      type: 'folder',
+      children: [
+        { name: 'index.html', type: 'file', content: htmlCode, previewContent: previewHtml },
+        {
+          name: 'js',
+          type: 'folder',
+          children: [{ name: 'main.js', type: 'file', content: jsCode }],
+        },
+      ],
+    };
+    
+    setFileTree(finalFileTree);
     setCurrentView('editor');
   };
 
   const handleContinueProject = (projectId: string) => {
-    setCurrentView('editor');
+    // This would load a saved project in a real app
+    toast({ title: 'Loading Project...', description: 'This feature is not yet implemented.'})
+    // setCurrentView('editor');
   };
 
   const handleBackToDashboard = () => {
     setCurrentView('dashboard');
+    setSelectedTemplate(null);
+    setGeneratedAssets(null);
+    setGameParameters(null);
+    setFileTree(null);
   };
 
-  if (currentView === 'editor') {
-    return <EditorView onBack={handleBackToDashboard} />;
+  if (currentView === 'editor' && fileTree) {
+    return <EditorView onBack={handleBackToDashboard} initialFileTree={fileTree} />;
   }
 
   if (currentView === 'reskin') {
@@ -84,7 +159,7 @@ export default function Home() {
   }
 
   if (currentView === 'template-selection') {
-    return <TemplateSelection onSelect={handleTemplateSelect} />;
+    return <TemplateSelection onBack={handleBackToDashboard} onSelect={handleTemplateSelect} />;
   }
 
 
@@ -154,38 +229,54 @@ export default function Home() {
 }
 
 
-const sampleCode = `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Game</title>
-    <style>
-        body { margin: 0; overflow: hidden; background: #111; }
-        canvas { display: block; }
-    </style>
-</head>
-<body>
-    <script src="js/main.js"></script>
-</body>
-</html>`;
-
-
-function EditorView({ onBack }: { onBack: () => void }) {
+function EditorView({ onBack, initialFileTree }: { onBack: () => void, initialFileTree: FileNode }) {
   const [leftPanelCollapsed, setLeftPanelCollapsed] = React.useState(false);
   const [rightPanelCollapsed, setRightPanelCollapsed] = React.useState(false);
-  const [activeFile, setActiveFile] = React.useState('index.html');
-  const [fileContent, setFileContent] = React.useState(sampleCode);
-
-  const handleFileSelect = (file: { name: string, content?: string }) => {
-    setActiveFile(file.name);
-    if(file.content) {
-      setFileContent(file.content);
-    } else {
-        setFileContent(`// Content for ${file.name}`);
+  
+  const [files, setFiles] = React.useState<Record<string, FileData>>(() => {
+    const fileMap: Record<string, FileData> = {};
+    function traverse(node: FileNode, path: string) {
+      if (node.type === 'file') {
+        fileMap[`${path}${node.name}`] = { 
+          name: node.name, 
+          content: node.content || '',
+          previewContent: node.previewContent
+        };
+      } else if (node.children) {
+        node.children.forEach(child => traverse(child, `${path}${node.name}/`));
+      }
     }
+    // Start traversal from children of the root to avoid "Project Name/" prefix
+    initialFileTree.children?.forEach(child => traverse(child, ''));
+    return fileMap;
+  });
+
+  const [activeFile, setActiveFile] = React.useState<string>('index.html');
+
+  const handleFileSelect = (filePath: string) => {
+    setActiveFile(filePath);
   };
 
+  const handleContentChange = (newContent: string) => {
+    setFiles(prevFiles => {
+      const updatedFiles = {
+          ...prevFiles,
+          [activeFile]: {
+              ...prevFiles[activeFile],
+              content: newContent,
+          },
+      };
+
+      // If we're editing JS, update the preview HTML for the iframe
+      if (activeFile === 'js/main.js') {
+        const htmlFile = updatedFiles['index.html'];
+        const newPreview = htmlFile.content.replace('<script src="js/main.js"></script>', `<script>${newContent}</script>`);
+        updatedFiles['index.html'] = { ...htmlFile, previewContent: newPreview };
+      }
+      
+      return updatedFiles;
+    });
+  };
 
   return (
     <div className="flex h-screen flex-col bg-background text-foreground">
@@ -204,7 +295,10 @@ function EditorView({ onBack }: { onBack: () => void }) {
           )}
         >
           <div className="h-full overflow-auto">
-            <FileExplorer onFileSelect={handleFileSelect} activeFile={activeFile} />
+            <FileExplorer 
+              fileTree={initialFileTree}
+              onFileSelect={handleFileSelect} 
+              activeFile={activeFile} />
           </div>
         </aside>
 
@@ -212,8 +306,9 @@ function EditorView({ onBack }: { onBack: () => void }) {
           <main className="flex-1 overflow-y-auto">
             <EditorPanel 
               activeFile={activeFile} 
-              fileContent={fileContent} 
-              onContentChange={setFileContent}
+              fileContent={files[activeFile]?.content || ''}
+              previewContent={files['index.html']?.previewContent || ''}
+              onContentChange={handleContentChange}
             />
           </main>
         </div>
@@ -227,8 +322,8 @@ function EditorView({ onBack }: { onBack: () => void }) {
            <div className="h-full overflow-hidden">
             <ChatPanel 
               activeFile={activeFile}
-              fileContent={fileContent}
-              onContentChange={setFileContent}
+              fileContent={files[activeFile]?.content || ''}
+              onContentChange={handleContentChange}
             />
            </div>
         </aside>
