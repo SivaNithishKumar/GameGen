@@ -1,1 +1,6 @@
-// Flows will be imported for their side effects in this file.
+import { config } from 'dotenv';
+config();
+
+import '@/ai/flows/modify-code-based-on-chat.ts';
+import '@/ai/flows/generate-starting-point-from-prompt.ts';
+import '@/ai/flows/generate-game-assets.ts';
