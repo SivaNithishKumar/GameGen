@@ -225,7 +225,11 @@ function EditorView({ onBack }: { onBack: () => void }) {
           )}
         >
            <div className="h-full overflow-hidden">
-            <ChatPanel />
+            <ChatPanel 
+              activeFile={activeFile}
+              fileContent={fileContent}
+              onContentChange={setFileContent}
+            />
            </div>
         </aside>
       </div>

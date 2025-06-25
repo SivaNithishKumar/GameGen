@@ -5,8 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { CornerDownLeft, Gem, User } from 'lucide-react';
+import { CornerDownLeft, Gem, User, LoaderCircle } from 'lucide-react';
 import * as React from 'react';
+import { modifyCodeBasedOnChat } from '@/ai/flows/modify-code-based-on-chat';
+import { useToast } from '@/hooks/use-toast';
+
 
 type Message = {
   id: string;
@@ -14,7 +17,13 @@ type Message = {
   text: string;
 };
 
-export function ChatPanel() {
+type ChatPanelProps = {
+  activeFile: string;
+  fileContent: string;
+  onContentChange: (newContent: string) => void;
+};
+
+export function ChatPanel({ activeFile, fileContent, onContentChange }: ChatPanelProps) {
   const [messages, setMessages] = React.useState<Message[]>([
     {
       id: '1',
@@ -23,24 +32,53 @@ export function ChatPanel() {
     },
   ]);
   const [input, setInput] = React.useState('');
+  const [isLoading, setIsLoading] = React.useState(false);
+  const { toast } = useToast();
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim()) return;
+    if (!input.trim() || isLoading) return;
 
     const userMessage: Message = { id: Date.now().toString(), sender: 'user', text: input };
     setMessages((prev) => [...prev, userMessage]);
+    const currentInput = input;
     setInput('');
+    setIsLoading(true);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const aiResponse: Message = {
+    try {
+      const result = await modifyCodeBasedOnChat({
+        code: fileContent,
+        instructions: currentInput,
+      });
+
+      if (result.modifiedCode) {
+        onContentChange(result.modifiedCode);
+        const aiResponse: Message = {
+          id: (Date.now() + 1).toString(),
+          sender: 'ai',
+          text: `I've updated the code in ${activeFile} based on your request.`,
+        };
+        setMessages((prev) => [...prev, aiResponse]);
+      } else {
+        throw new Error('The AI did not return any code modifications.');
+      }
+    } catch (error) {
+      console.error('AI code modification failed:', error);
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+      const aiErrorResponse: Message = {
         id: (Date.now() + 1).toString(),
         sender: 'ai',
-        text: `I've received your request: "${input}". I am processing it now.`,
+        text: `Sorry, I couldn't modify the code. Please try again. Error: ${errorMessage}`,
       };
-      setMessages((prev) => [...prev, aiResponse]);
-    }, 1000);
+      setMessages((prev) => [...prev, aiErrorResponse]);
+      toast({
+        title: 'Error Modifying Code',
+        description: 'The AI assistant failed to modify the code. Please check the console for more details.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -85,6 +123,20 @@ export function ChatPanel() {
               </div>
             </div>
           ))}
+          {isLoading && (
+            <div className="flex items-start gap-3 flex-row">
+                 <Avatar className="h-8 w-8 flex-shrink-0">
+                    <AvatarImage />
+                    <AvatarFallback className="text-white bg-primary">
+                        <Gem className="h-5 w-5" />
+                    </AvatarFallback>
+                </Avatar>
+                <div className="max-w-[80%] rounded-lg p-3 text-sm shadow-sm bg-muted flex items-center gap-2">
+                    <LoaderCircle className="h-5 w-5 animate-spin" />
+                    <p className="font-code leading-relaxed">Thinking...</p>
+                </div>
+            </div>
+          )}
         </div>
       </ScrollArea>
       <div className="border-t p-4">
@@ -94,6 +146,7 @@ export function ChatPanel() {
             onChange={(e) => setInput(e.target.value)}
             placeholder="Describe a change or ask a question..."
             className="pr-12"
+            disabled={isLoading}
           />
           <Button
             type="submit"
@@ -101,6 +154,7 @@ export function ChatPanel() {
             variant="ghost"
             className="absolute right-1 top-1/2 -translate-y-1/2"
             aria-label="Send message"
+            disabled={isLoading}
           >
             <CornerDownLeft className="h-5 w-5" />
           </Button>
