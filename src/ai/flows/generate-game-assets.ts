@@ -87,7 +87,7 @@ const generateGameAssetsFlow = ai.defineFlow(
             },
           },
         },
-        prompt: `Generate a short, looping, upbeat soundtrack suitable for a ${input.theme || 'retro'} video game. The music should be energetic and inspiring.`,
+        prompt: `A fun, retro-style sound effect for your ${input.theme || 'classic'} game. Beep boop bleep.`,
       });
       if (!media) {
         throw new Error('no media returned');
